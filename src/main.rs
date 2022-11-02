@@ -20,8 +20,8 @@ fn main() {
         std::process::exit(0);
     }
     let port = match std::env::args().nth(2) {
-        // Some(v) => v.parse::<u16>().unwrap(),
-        _ => 4455 as u16,
+        Some(v) => v.parse::<u16>().unwrap(),
+        None => 4455 as u16,
     }
     .clone();
     let host = match std::env::args().nth(2) {
@@ -30,6 +30,7 @@ fn main() {
     };
 
     let options = eframe::NativeOptions::default();
+    // options.icon_data = Some(eframe::IconData { rgba: (), width: (), height: () })
     eframe::run_native(
         "OBS SCENE SWITCHER",
         options,
