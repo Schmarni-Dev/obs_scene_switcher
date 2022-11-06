@@ -52,8 +52,10 @@ impl eframe::App for crate::ObsSwitcher {
         });
 
         fn test(this: &mut crate::ObsSwitcher, scene: &obws::responses::scenes::Scene) {
-            let main_scene = "Scene";
-            let sources = this.client.get_scene_items(main_scene).unwrap();
+            let sources = this
+                .client
+                .get_scene_items(&this.data.main_scene_name)
+                .unwrap();
             for i in 0..sources.len() {
                 let source = &sources[i];
 
@@ -64,7 +66,9 @@ impl eframe::App for crate::ObsSwitcher {
                             if s.source_name != "<Inject/>"
                                 && s.source_type == obws::responses::scene_items::SourceType::Scene
                             {
-                                this.client.remove_scene_item(main_scene, s.id).unwrap();
+                                this.client
+                                    .remove_scene_item(&this.data.main_scene_name, s.id)
+                                    .unwrap();
                             }
                         }
                         _ => {}
@@ -72,7 +76,10 @@ impl eframe::App for crate::ObsSwitcher {
                 }
             }
             let mut found_inject = false;
-            let sources = this.client.get_scene_items(main_scene).unwrap();
+            let sources = this
+                .client
+                .get_scene_items(&this.data.main_scene_name)
+                .unwrap();
             for i in 0..sources.len() {
                 let source = &sources[i];
                 if !found_inject {
@@ -83,10 +90,10 @@ impl eframe::App for crate::ObsSwitcher {
                     if found_inject {
                         let id = this
                             .client
-                            .create_scene_item(main_scene, &scene.name)
+                            .create_scene_item(&this.data.main_scene_name, &scene.name)
                             .unwrap();
                         this.client
-                            .set_scene_item_index(id, source.index, main_scene)
+                            .set_scene_item_index(id, source.index, &this.data.main_scene_name)
                             .unwrap();
                         // let index = this.client.get_scene_item(main_scene, id).unwrap() + 1;
                         // this.client
@@ -95,7 +102,9 @@ impl eframe::App for crate::ObsSwitcher {
                         // println!(
                         //     "{}",
                         // );
-                        this.client.set_programm_scene(main_scene).unwrap();
+                        this.client
+                            .set_programm_scene(&this.data.main_scene_name)
+                            .unwrap();
                     }
                 }
             }
