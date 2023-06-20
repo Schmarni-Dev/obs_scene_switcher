@@ -1,5 +1,8 @@
 use eframe::egui;
-impl crate::ObsSwitcher {
+use obws::responses::{scene_items::SourceType, scenes::Scene};
+
+use crate::ObsSwitcher;
+impl ObsSwitcher {
     pub fn new(
         cc: &eframe::CreationContext<'_>,
         host: String,
@@ -19,7 +22,58 @@ impl crate::ObsSwitcher {
         }
     }
 }
-impl eframe::App for crate::ObsSwitcher {
+
+impl ObsSwitcher {
+    pub fn switch_inner_scene(&mut self, new_scene: &Scene) -> Option<()> {
+        let inject = self.find_inject()?;
+        let sources = self
+            .client
+            .get_scene_items(&self.data.main_scene_name)
+            .ok()?;
+        let w = sources
+            .iter()
+            .enumerate()
+            .map(|t| {
+                println!("{}: {} :{}", t.0, t.1.source_name,t.1.index);
+                t.1
+            })
+            .nth((inject.index - 1) as usize)?;
+        println!("{}", w.source_name);
+        if w.source_name != "</Inject>" && w.source_type == SourceType::Scene {
+            self.client
+                .remove_scene_item(&self.data.main_scene_name, w.id)
+                .ok()?;
+        }
+        let inject = self.find_inject()?;
+
+        let id = self
+            .client
+            .create_scene_item(&self.data.main_scene_name, &new_scene.name)
+            .unwrap();
+        self.client
+            .set_scene_item_index(id, inject.index, &self.data.main_scene_name)
+            .unwrap();
+
+        self.client
+            .set_programm_scene(&self.data.main_scene_name)
+            .unwrap();
+
+        Some(())
+    }
+    pub fn find_inject(&mut self) -> Option<obws::responses::scene_items::SceneItem> {
+        let sources = self
+            .client
+            .get_scene_items(&self.data.main_scene_name)
+            .ok()?;
+
+        sources
+            .iter()
+            .map(|source| source.clone())
+            .find(|source| source.source_name == "<Inject>")
+    }
+}
+
+impl eframe::App for ObsSwitcher {
     fn on_close_event(&mut self) -> bool {
         println!("Bye");
         true
@@ -38,8 +92,9 @@ impl eframe::App for crate::ObsSwitcher {
                     if self.data.main_scene_name != scene.name
                         && ui.button("Switch to Scene!").clicked()
                     {
+                        let _ = self.switch_inner_scene(&scene);
                         // self.client.set_preview_scene(&scene.name).unwrap();
-                        test(self, &scene);
+                        // test(self, &scene);
                         // self.client.set_preview_scene(&scene.name).unwrap();
                     }
                     if self.data.main_scene_name != scene.name
@@ -56,6 +111,9 @@ impl eframe::App for crate::ObsSwitcher {
                 .client
                 .get_scene_items(&this.data.main_scene_name)
                 .unwrap();
+            // let index = find_inject(this.client, &this.data.main_scene_name)
+            // ;
+            // source.unwrap().index
             for i in 0..sources.len() {
                 let source = &sources[i];
 
@@ -95,13 +153,7 @@ impl eframe::App for crate::ObsSwitcher {
                         this.client
                             .set_scene_item_index(id, source.index, &this.data.main_scene_name)
                             .unwrap();
-                        // let index = this.client.get_scene_item(main_scene, id).unwrap() + 1;
-                        // this.client
-                        //     .set_scene_item_index(source.id, source.index + 1, main_scene)
-                        //     .unwrap();
-                        // println!(
-                        //     "{}",
-                        // );
+
                         this.client
                             .set_programm_scene(&this.data.main_scene_name)
                             .unwrap();
@@ -111,3 +163,5 @@ impl eframe::App for crate::ObsSwitcher {
         }
     }
 }
+
+// TODO make work
