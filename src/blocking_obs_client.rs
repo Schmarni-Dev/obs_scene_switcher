@@ -27,11 +27,11 @@ pub fn connect(
     Ok(BlockingClient { inner, rt })
 }
 impl BlockingClient {
-    pub fn get_scenes(&mut self) -> Result<obws::responses::scenes::Scenes, obws::Error> {
+    pub fn get_scenes(&self) -> Result<obws::responses::scenes::Scenes, obws::Error> {
         self.rt.block_on(self.inner.scenes().list())
     }
     pub fn get_scene_items(
-        &mut self,
+        &self,
         name: &str,
     ) -> Result<Vec<obws::responses::scene_items::SceneItem>, obws::Error> {
         self.rt.block_on(self.inner.scene_items().list(name))

@@ -34,7 +34,7 @@ impl ObsSwitcher {
             .iter()
             .enumerate()
             .map(|t| {
-                println!("{}: {} :{}", t.0, t.1.source_name,t.1.index);
+                println!("{}: {} :{}", t.0, t.1.source_name, t.1.index);
                 t.1
             })
             .nth((inject.index - 1) as usize)?;
@@ -60,7 +60,7 @@ impl ObsSwitcher {
 
         Some(())
     }
-    pub fn find_inject(&mut self) -> Option<obws::responses::scene_items::SceneItem> {
+    pub fn find_inject(&self) -> Option<obws::responses::scene_items::SceneItem> {
         let sources = self
             .client
             .get_scene_items(&self.data.main_scene_name)
@@ -71,6 +71,14 @@ impl ObsSwitcher {
             .map(|source| source.clone())
             .find(|source| source.source_name == "<Inject>")
     }
+    pub fn has_inject(&self, scene_name: &str) -> bool {
+        if let Ok(sources) = self.client.get_scene_items(scene_name) {
+            return sources
+                .iter()
+                .any(|source| source.source_name == "<Inject>");
+        }
+        return false;
+    }
 }
 
 impl eframe::App for ObsSwitcher {
@@ -79,89 +87,54 @@ impl eframe::App for ObsSwitcher {
         true
     }
 
-    // #[tokio::main]
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         egui::CentralPanel::default().show(ctx, |ui| {
-            for scene in self.client.get_scenes().unwrap().scenes.into_iter().rev() {
+            ctx.set_pixels_per_point(2.0);
+            ui.horizontal(|ui| {
+                ui.heading(format!("Main Scene: {} \n", self.main_scene_name));
+            });
+            let non_main_scenes = self
+                .client
+                .get_scenes()
+                .unwrap()
+                .scenes
+                .into_iter()
+                .filter(|s| !self.has_inject(&s.name))
+                .rev()
+                .collect::<Vec<_>>();
+            let main_scenes = self
+                .client
+                .get_scenes()
+                .unwrap()
+                .scenes
+                .into_iter()
+                .filter(|s| self.has_inject(&s.name))
+                .rev()
+                .collect::<Vec<_>>();
+
+            for scene in non_main_scenes {
                 ui.horizontal(|ui| {
-                    if self.data.main_scene_name == scene.name {
-                        ui.heading(format!("Main Scene: {} \n", scene.name));
-                    } else {
-                        ui.heading(format!("Scene: {}", scene.name));
-                    }
+                    ui.label(format!("Scene: {}", scene.name));
                     if self.data.main_scene_name != scene.name
                         && ui.button("Switch to Scene!").clicked()
                     {
                         let _ = self.switch_inner_scene(&scene);
-                        // self.client.set_preview_scene(&scene.name).unwrap();
-                        // test(self, &scene);
-                        // self.client.set_preview_scene(&scene.name).unwrap();
                     }
-                    if self.data.main_scene_name != scene.name
-                        && ui.button("Set as Main Scene!").clicked()
-                    {
+                });
+            }
+            ui.heading("\nSelect Main Scene:");
+            for scene in main_scenes {
+                ui.horizontal(|ui| {
+                    if self.data.main_scene_name == scene.name {
+                        return;
+                    }
+
+                    ui.label(format!("Scene: {}", scene.name));
+                    if ui.button("Set as Main Scene!").clicked() {
                         self.data.main_scene_name = scene.name;
                     }
                 });
             }
         });
-
-        fn test(this: &mut crate::ObsSwitcher, scene: &obws::responses::scenes::Scene) {
-            let sources = this
-                .client
-                .get_scene_items(&this.data.main_scene_name)
-                .unwrap();
-            // let index = find_inject(this.client, &this.data.main_scene_name)
-            // ;
-            // source.unwrap().index
-            for i in 0..sources.len() {
-                let source = &sources[i];
-
-                if source.source_name == "<Inject>" {
-                    match &sources.get(i - 1) {
-                        Some(s) => {
-                            println!("{}", s.source_name);
-                            if s.source_name != "<Inject/>"
-                                && s.source_type == obws::responses::scene_items::SourceType::Scene
-                            {
-                                this.client
-                                    .remove_scene_item(&this.data.main_scene_name, s.id)
-                                    .unwrap();
-                            }
-                        }
-                        _ => {}
-                    }
-                }
-            }
-            let mut found_inject = false;
-            let sources = this
-                .client
-                .get_scene_items(&this.data.main_scene_name)
-                .unwrap();
-            for i in 0..sources.len() {
-                let source = &sources[i];
-                if !found_inject {
-                    // println!("{:?}", source.source_name == "<Inject>");
-                    println!("{:?}", source.source_name == "<Inject>");
-                    // println!("{:?}", source.index - 1);
-                    found_inject = source.source_name == "<Inject>";
-                    if found_inject {
-                        let id = this
-                            .client
-                            .create_scene_item(&this.data.main_scene_name, &scene.name)
-                            .unwrap();
-                        this.client
-                            .set_scene_item_index(id, source.index, &this.data.main_scene_name)
-                            .unwrap();
-
-                        this.client
-                            .set_programm_scene(&this.data.main_scene_name)
-                            .unwrap();
-                    }
-                }
-            }
-        }
     }
 }
-
-// TODO make work
